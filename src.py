@@ -5,6 +5,7 @@ import math
 import shapely.geometry as geometry
 from matplotlib.path import Path
 from shapely.geometry import Point
+from shapely.affinity import rotate
 
 def alpha_shape(points, alpha):
     """
@@ -76,4 +77,24 @@ def generate_one_d_image(polyg, nx=64,ny=64):
     path = Path(poly_verts)
     grid = path.contains_points(points)
     grid = grid.reshape((ny,nx))
-    return(grid.sum(axis=0))
+    return(grid.sum(axis=0).astype('uint8'))
+
+def gen_rand_poly_images(n = 1000,img_size = 64, n_point = 60, alpha = .2):
+    #randomizes the seeds in each worker process
+    np.random.seed()
+    
+    #generate objects at the center of the image
+    a = np.random.uniform(img_size // 4, (img_size * 3) // 4, size=(n_point,2))
+    points = [Point(a[i]) for i in range(n_point)]
+    concave_hull, edge_points = alpha_shape(points, alpha=alpha)
+    
+    #if the result is a multipolygon, select the first polygon
+    t_poly = concave_hull.buffer(1)
+    if(type(t_poly) == geometry.multipolygon.MultiPolygon):
+        t_poly = t_poly[0]
+    
+    rotation_angles = np.hstack((np.array([0.],dtype='float16'), np.random.uniform(0,360, size = n-1).astype('float16')))
+    rotated_polygons = [rotate(t_poly,k) for k in rotation_angles]
+    one_d_images = np.array([generate_one_d_image(rotated_polygons[k]) for k in range(n)])
+    
+    return(rotation_angles, one_d_images)
