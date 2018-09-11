@@ -3,8 +3,8 @@ from scipy.spatial import Delaunay
 import numpy as np
 import math
 import shapely.geometry as geometry
-
-
+from matplotlib.path import Path
+from shapely.geometry import Point
 
 def alpha_shape(points, alpha):
     """
@@ -62,3 +62,18 @@ def alpha_shape(points, alpha):
     m = geometry.MultiLineString(edge_points)
     triangles = list(polygonize(m))
     return cascaded_union(triangles), edge_points
+
+def generate_one_d_image(polyg, nx=64,ny=64):
+    poly_verts = list(np.array(polyg.exterior.xy).T)
+
+    # Create vertex coordinates for each grid cell...
+    # (<0,0> is at the top left of the grid in this system)
+    x, y = np.meshgrid(np.arange(nx), np.arange(ny))
+    x, y = x.flatten(), y.flatten()
+
+    points = np.vstack((x,y)).T
+
+    path = Path(poly_verts)
+    grid = path.contains_points(points)
+    grid = grid.reshape((ny,nx))
+    return(grid.sum(axis=0))
