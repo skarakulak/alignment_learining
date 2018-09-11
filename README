@@ -1,1 +1,9 @@
-I'm working on a learning based method for the multi-reference alignment problem. Still in development.
+In this notebook I'm working on a learning based approach for the multi-reference alignment problem. I try to reconstruct a two-dimentional image from one-dimentional images, whose angles are unknown by the algorithm. 
+
+To that end, I generate two dimentional random concave hulls and simulate their images to create training data for the learning algorithm. I will test the algorithms success recovering the image's angles, from which point on there are readily available mathematical methods to reconstruct the whole image using images and their rotation angles. 
+
+After I measure how well the angles are recovered, I will also build another model where the whole two dimentional image would be reconstructed by an end-to-end learning algorithm, without needing a seperate mathematical tool for the reconstruction step.
+
+Upon the completion of these steps, I will add another layer of complexity by decreasing the signal to noise ratio with adding random gaussian noise to the one-dimentional inputs.
+
+If these tests prove to be successful and that a learning based approach could be used for reconstruction, I will extent the solution to recovering three-dimentional objects from their two-dimentional images. To that end, I plan to use Cryo-EM data and reconstruct three-dimentional molecules from their images.
