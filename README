@@ -6,4 +6,4 @@ After I measure the algorithm's success in recovery of the rotation angles, I wi
 
 Upon the completion of these steps, I will add another layer of complexity by decreasing the signal to noise ratio with adding random gaussian noise to the one-dimentional inputs. A measurement that have a particular importance in information theory is the change in number of images that are required to be seen to produce a successful reconstruction, as the signal to noise decreases.
 
-If these tests prove to be successful and that a learning based approach could be used for reconstruction, I will extent the solution to recovering three-dimentional objects from their two-dimentional images. To that end, I plan to use Cryo-EM data and reconstruct three-dimentional molecules from their images.
+If these tests prove to be successful and that a learning based approach could be used for reconstruction, I will extent the solution to recovering three-dimentional objects from their two-dimentional images. To that end, I plan to use Cryo-EM data and reconstruct three-dimentional molecules from their images. 

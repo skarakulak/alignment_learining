@@ -82,7 +82,7 @@ def generate_one_d_image(polyg, nx=64,ny=64):
     grid = path.contains_points(points)
     grid = grid.reshape((ny,nx))
     return(grid.sum(axis=0).astype('uint8'))
-
+ 
 def gen_rand_poly_images(n = 1000,img_size = 64, n_point = 60, alpha = .2):
     """
     Generates a polygon by computing a randomly generated two
