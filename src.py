@@ -65,6 +65,10 @@ def alpha_shape(points, alpha):
     return cascaded_union(triangles), edge_points
 
 def generate_one_d_image(polyg, nx=64,ny=64):
+    """ 
+    Takes a two-dimentional polygon as its input,
+    and produces the polygons one-dimentional density 
+    by taking integral along the x-axis. """
     poly_verts = list(np.array(polyg.exterior.xy).T)
 
     # Create vertex coordinates for each grid cell...
@@ -80,6 +84,12 @@ def generate_one_d_image(polyg, nx=64,ny=64):
     return(grid.sum(axis=0).astype('uint8'))
 
 def gen_rand_poly_images(n = 1000,img_size = 64, n_point = 60, alpha = .2):
+    """
+    Generates a polygon by computing a randomly generated two
+    dimentional concave hull. The function returns a sample of
+    the polygons one-dimentional images, and their degrees of 
+    rotations.
+    """
     #randomizes the seeds in each worker process
     np.random.seed()
     
