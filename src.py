@@ -14,7 +14,7 @@ def alpha_shape(points, alpha):
     @param points: Iterable container of points.
     @param alpha: alpha value to influence the gooeyness of the border. Smaller
                   numbers don't fall inward as much as larger numbers. Too large,
-                  and you lose everything!
+                  and you lose everything.
     """
     if len(points) < 4:
         # When you have a triangle, there is no sense in computing an alpha
