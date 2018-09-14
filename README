@@ -1,4 +1,4 @@
-In this notebook I'm working on a learning based approach for the multi-reference alignment problem. I try to reconstruct two-dimentional objects from its one-dimentional density images, which are taken from unknown angles. 
+In this notebook I'm working on a learning based approach for the multi-reference alignment problem. I try to reconstruct two-dimentional objects from its one-dimentional density images which are taken from unknown angles. 
 
 To that end, I generate two-dimentional random concave hulls and simulate their one-dimentional density images to create training data for the learning algorithm. I will measure the algorithm's success in recovery of the image's angles. If the rotation angles of the one-dimentional images are known, there are readily available mathematical methods that reconstruct the whole two-dimentional object by using the one-dimentional density images and their rotation angles. 
 
@@ -6,4 +6,5 @@ After I measure the algorithm's success in recovery of the rotation angles, I wi
 
 Upon the completion of these steps, I will add another layer of complexity by decreasing the signal to noise ratio with adding random gaussian noise to the one-dimentional inputs. A measurement that have a particular importance in information theory is the change in number of images that are required to be seen to produce a successful reconstruction, as the signal to noise decreases.
 
-If these tests prove to be successful and that a learning based approach could be used for reconstruction, I will extent the solution to recovering three-dimentional objects from their two-dimentional images. To that end, I plan to use Cryo-EM data and reconstruct three-dimentional molecules from their images. 
+If these tests prove to be successful and that a learning based approach could be used for reconstruction, I will extent the solution to recovering three-dimentional objects from their two-dimentional images. To that end, I plan to use Cryo-EM data and reconstruct three-dimentional molecules from their images.
+
