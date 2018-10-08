@@ -83,6 +83,25 @@ def generate_one_d_image(polyg, nx=64,ny=64):
     grid = grid.reshape((ny,nx))
     return(grid.sum(axis=0).astype('uint8'))
  
+def two_d_image(polyg, nx=64,ny=64):
+    """ 
+    Takes a two-dimentional polygon as its input,
+    and produces 2d boolean mapping.
+    """
+    poly_verts = list(np.array(polyg.exterior.xy).T)
+
+    # Create vertex coordinates for each grid cell...
+    # (<0,0> is at the top left of the grid in this system)
+    x, y = np.meshgrid(np.arange(nx), np.arange(ny))
+    x, y = x.flatten(), y.flatten()
+
+    points = np.vstack((x,y)).T
+
+    path = Path(poly_verts)
+    grid = path.contains_points(points)
+    grid = grid.reshape((ny,nx))
+    return(grid.astype('uint8'))
+    
 def gen_rand_poly_images(n = 1000,img_size = 64, n_point = 60, alpha = .2):
     """
     Generates a polygon by computing a randomly generated two
@@ -105,6 +124,7 @@ def gen_rand_poly_images(n = 1000,img_size = 64, n_point = 60, alpha = .2):
     
     rotation_angles = np.hstack((np.array([0.],dtype='float16'), np.random.uniform(0,360, size = n-1).astype('float16')))
     rotated_polygons = [rotate(t_poly,k) for k in rotation_angles]
-    one_d_images = np.array([generate_one_d_image(rotated_polygons[k]) for k in range(n)])
+    one_d_images = np.array([generate_one_d_image(rotated_polygons[k], nx=img_size,ny=img_size) for k in range(n)])
+    two_d_img = two_d_image(t_poly, nx=img_size,ny=img_size)
     
-    return(rotation_angles, one_d_images)
+    return(rotation_angles, one_d_images, two_d_img)
