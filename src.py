@@ -6,6 +6,25 @@ import shapely.geometry as geometry
 from matplotlib.path import Path
 from shapely.geometry import Point
 from shapely.affinity import rotate
+import os
+
+def strided_indexing_roll(a, r):
+    # https://stackoverflow.com/questions/20360675/roll-rows-of-a-matrix-independently
+    # Concatenate with sliced to cover all rolls
+    a_ext = np.concatenate((a,a[:,:-1]),axis=1)
+
+    # Get sliding windows; use advanced-indexing to select appropriate ones
+    n = a.shape[1]
+    return viewW(a_ext,(1,n))[np.arange(len(r)), (n-r)%n,0]
+
+def safe_mkdir(path):
+    """ 
+    Create a directory if there isn't one already. 
+    """
+    try:
+        os.mkdir(path)
+    except OSError:
+        pass
 
 def alpha_shape(points, alpha):
     """
@@ -64,7 +83,7 @@ def alpha_shape(points, alpha):
     triangles = list(polygonize(m))
     return cascaded_union(triangles), edge_points
 
-def generate_one_d_image(polyg, nx=64,ny=64):
+def generate_one_d_image(polyg, nx=64,ny=64, shift_n = 8):
     """ 
     Takes a two-dimentional polygon as its input,
     and produces the polygons one-dimentional density 
@@ -81,9 +100,19 @@ def generate_one_d_image(polyg, nx=64,ny=64):
     path = Path(poly_verts)
     grid = path.contains_points(points)
     grid = grid.reshape((ny,nx))
-    return(grid.sum(axis=0).astype('uint8'))
+    
+    oneDImage = grid.sum(axis=0).astype('uint8')
+    
+    # random image translations
+    if(shift_n > 0):
+        temp_1d_np = np.zeros(nx+shift_n*2)
+        col_start = np.random.randint(-shift_n, shift_n+1) # [low,high)
+        temp_1d_np[8+col_start:8+col_start+64] = oneDImage
+        oneDImage = np.copy(temp_1d_np[8:8+64])
+    
+    return(oneDImage)
  
-def two_d_image(polyg, nx=64,ny=64):
+def two_d_image(polyg, nx0=64,nx1=64,o_nx0=48, o_nx1=48):
     """ 
     Takes a two-dimentional polygon as its input,
     and produces 2d boolean mapping.
@@ -92,17 +121,28 @@ def two_d_image(polyg, nx=64,ny=64):
 
     # Create vertex coordinates for each grid cell...
     # (<0,0> is at the top left of the grid in this system)
-    x, y = np.meshgrid(np.arange(nx), np.arange(ny))
+    x, y = np.meshgrid(np.arange(nx0), np.arange(nx1))
     x, y = x.flatten(), y.flatten()
 
     points = np.vstack((x,y)).T
 
     path = Path(poly_verts)
     grid = path.contains_points(points)
-    grid = grid.reshape((ny,nx))
-    return(grid.astype('uint8'))
+    grid = grid.reshape((nx1,nx0))
     
-def gen_rand_poly_images(n = 1000,img_size = 64, n_point = 60, alpha = .2):
+    # finds the the minimum x_0 and x_1 values of the object. 
+    # lower limit exists to keep the dimension equal to o_nx
+    temp= grid.argmax(axis=0)
+    min_x0 = min(temp[temp>0].min(),nx0-o_nx0)
+    temp= grid.argmax(axis=1)
+    min_x1 = min(temp[temp>0].min(),nx1-o_nx1)
+    # returns an array sized (o_nx0, o_nx1), where we crop 
+    # out the empty rows at the top, and the empty columns
+    # on the left of the array. This is done to reduce the
+    # search space for calculating the orbit loss.
+    return(grid[min_x0:min_x0+o_nx0, min_x1:min_x1+o_nx1].astype('uint8'))
+    
+def gen_rand_poly_images(n = 1000,img_size = 64,outp_size=48, n_point = 60, alpha = .2):
     """
     Generates a polygon by computing a randomly generated two
     dimentional concave hull. The function returns a sample of
@@ -125,6 +165,11 @@ def gen_rand_poly_images(n = 1000,img_size = 64, n_point = 60, alpha = .2):
     rotation_angles = np.hstack((np.array([0.],dtype='float16'), np.random.uniform(0,360, size = n-1).astype('float16')))
     rotated_polygons = [rotate(t_poly,k) for k in rotation_angles]
     one_d_images = np.array([generate_one_d_image(rotated_polygons[k], nx=img_size,ny=img_size) for k in range(n)])
-    two_d_img = two_d_image(t_poly, nx=img_size,ny=img_size)
-    
-    return(rotation_angles, one_d_images, two_d_img)
+    #two_d_img = two_d_image(t_poly, nx=img_size,ny=img_size)
+    two_d_images = np.array([two_d_image(p,nx0=img_size
+                                         ,nx1=img_size
+                                         ,o_nx0=outp_size
+                                         ,o_nx1=outp_size )
+                             for p in [rotate(t_poly,k) for k in range(360)]])
+
+    return(rotation_angles, one_d_images, two_d_images)
