@@ -90,13 +90,16 @@ def convObservations(X,batch_size,n_images,isTraining=False, reuse=False):
         lrelu4 = lrelu(conv_4, 0.1,'lrelu4')  # 1x512
         bnorm4 = bnorm(lrelu4,isTraining,'bnorm_1d_4')
 
-        fc_0 = tf.layers.dense(bnorm4, 512, name='fc_0')
-        fl_0 = lrelu(fc_0,0.1,'flrelu_0')
+        fc_0 = tf.layers.dense(bnorm4, 512, name='fc_dense_0')
+        fl_0 = lrelu(fc_0,0.1,'fc_lrelu_0')
         bnorm_fc_0 = bnorm(fl_0,isTraining,'bnorm_1d_fc0')
-        fc_1 = tf.layers.dense(bnorm_fc_0, 512, name='fc_1')
-        fl_1 = lrelu(fc_1,0.1, name='flrelu_1')
+        fc_1 = tf.layers.dense(bnorm_fc_0, 512, name='fc_dense_1')
+        fl_1 = lrelu(fc_1,0.1, name='fc_lrelu_1')
+        bnorm_fc_1 = bnorm(fl_1,isTraining,'bnorm_1d_fc1')
+        fc_2 = tf.layers.dense(bnorm_fc_1, 512, name='fc_dense_2')
+        fl_2 = lrelu(fc_2,0.1, name='fc_lrelu_2')
 
-        h = tf.reduce_mean(fl_1, [1,2])
+        h = tf.reduce_mean(fl_2, [1,2])
 
         return(
             conv_0,
@@ -119,6 +122,9 @@ def convObservations(X,batch_size,n_images,isTraining=False, reuse=False):
             bnorm_fc_0,
             fc_1,
             fl_1,
+            bnorm_fc_1,
+            fc_2,
+            fl_2,
             h
             )
 
@@ -331,6 +337,7 @@ class objGenNetwork(object):
             )
 
         layerVariantPartNorms = np.copy(layerInvarNorms)
+        activationNorms = np.copy(layerInvarNorms)
 
         for i in range(evalNTimes):
             layerInv_batch_x = self.layerInv_batch_x_new
@@ -347,35 +354,44 @@ class objGenNetwork(object):
                 n_s = i * self.testSampleSize        # for indexing
                 n_end = (i+1) * self.testSampleSize  # for indexing
                 if(len(l.shape)==4):
-	                # mean activation of the layer. tiled for comparing different shifts
-	                invariant = np.tile(l.mean(axis=1),(1,self.signalDim,1)).reshape(l.shape)
-	                layerInvarNorms[n_s:n_end,ind]=np.sqrt(np.sum(np.square(invariant),axis=(1,2,3)) )
-	                # norm of the variant part of the activation. 
-	                variantPart = np.sqrt(np.sum(np.square(l - invariant),axis=(1,2,3)) )
-	                layerVariantPartNorms[n_s:n_end,ind] = variantPart
+                    activationNorms[n_s:n_end,ind]=np.sum(np.sqrt(np.sum(np.square(l),axis=(2,3)) ),axis=1)
+                    # mean activation of the layer. tiled for comparing different shifts
+                    invariant = np.tile(l.mean(axis=1),(1,self.signalDim,1)).reshape(l.shape)
+                    layerInvarNorms[n_s:n_end,ind]=np.sum(np.sqrt(np.sum(np.square(invariant),axis=(2,3)) ),axis=1)
+                    # norm of the variant part of the activation. 
+                    variantPart = np.sum(np.sqrt(np.sum(np.square(l - invariant),axis=(2,3)) ), axis=1)
+                    layerVariantPartNorms[n_s:n_end,ind] = variantPart
                 elif(len(l.shape)==3):
-	                # mean activation of the layer. tiled for comparing different shifts
-	                invariant = np.tile(l.mean(axis=1),(1,self.signalDim)).reshape(l.shape)
-	                layerInvarNorms[n_s:n_end,ind]=np.sqrt(np.sum(np.square(invariant),axis=(1,2)) )
-	                # norm of the variant part of the activation. 
-	                variantPart = np.sqrt(np.sum(np.square(l - invariant),axis=(1,2)) )
-	                layerVariantPartNorms[n_s:n_end,ind] = variantPart
+                    activationNorms[n_s:n_end,ind]=np.sum(np.sqrt(np.sum(np.square(l),axis=2) ),axis=1)
+                    # mean activation of the layer. tiled for comparing different shifts
+                    invariant = np.tile(l.mean(axis=1),(1,self.signalDim)).reshape(l.shape)
+                    layerInvarNorms[n_s:n_end,ind]=np.sum(np.sqrt(np.sum(np.square(invariant),axis=2) ),axis=1)
+                    # norm of the variant part of the activation. 
+                    variantPart = np.sum(np.sqrt(np.sum(np.square(l - invariant),axis=2) ),axis=1)
+                    layerVariantPartNorms[n_s:n_end,ind] = variantPart
             pool.close()
             pool.join()
 
         self.layersAverageInvarNorm = np.mean(layerInvarNorms,axis=0)
         self.layersAverageVariantPartNorm = np.mean(layerVariantPartNorms,axis=0)
-        self.layersVarInvarRatios = np.mean(layerInvarNorms/layerVariantPartNorms, axis=0)
+        self.layersActivationNorm = np.mean(activationNorms,axis=0)
+        self.layersVarActRatios = np.mean(layerVariantPartNorms/activationNorms, axis=0)
+        self.layersInvarActRatios = np.mean(layerInvarNorms/activationNorms, axis=0)
 
         if (self.logFile!=False):
-            if(not os.path.isfile('norm'+ self.logFile)):
-                with open('norm'+ self.logFile,'a') as lgfile:   
+            if(not os.path.isfile('normVA_'+ self.logFile)):
+                with open('normVA_'+ self.logFile,'a') as lgfile:   
                     lgfile.write('\t'+ '\t'.join( [k.name.split('/')[1] for k in list(self.internal_layers)[:-1] ]) +'\n' )
-                    lgfile.write('\t'.join([str(step)]+['{:.5}'.format(k) for k in list(self.layersVarInvarRatios)]) +'\n' )
+                    lgfile.write('\t'.join([str(step)]+['{:.5}'.format(k) for k in list(self.layersVarActRatios)]) +'\n' )
+                with open('normIA_'+ self.logFile,'a') as lgfile:   
+                    lgfile.write('\t'+ '\t'.join( [k.name.split('/')[1] for k in list(self.internal_layers)[:-1] ]) +'\n' )
+                    lgfile.write('\t'.join([str(step)]+['{:.5}'.format(k) for k in list(self.layersInvarActRatios)]) +'\n' )
 
             else:
-                with open('norm'+ self.logFile,'a') as lgfile:
-                    lgfile.write('\t'.join([str(step)] +['{:.5}'.format(k) for k in list(self.layersVarInvarRatios)]) +'\n')
+                with open('normVA_'+ self.logFile,'a') as lgfile:
+                    lgfile.write('\t'.join([str(step)] +['{:.5}'.format(k) for k in list(self.layersVarActRatios)]) +'\n')
+                with open('normIA_'+ self.logFile,'a') as lgfile:
+                    lgfile.write('\t'.join([str(step)] +['{:.5}'.format(k) for k in list(self.layersInvarActRatios)]) +'\n')
                 
 
     def testEval(self, sess, step,evalNTimes):
